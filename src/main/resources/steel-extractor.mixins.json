@@ -5,14 +5,8 @@
 	"mixins": [
 		"ExampleMixin",
 		"ChunkStepMixin",
-		"ChunkAccessBiomeCacheMixin",
-		"ClimateRTreeMixin",
-		"BiomeSourcePossibleBiomesMixin",
-		"AxeItemAccessor",
-		"VegetationPatchFeatureMixin",
-		"WaterloggedVegetationPatchFeatureMixin",
-		"TreeFeatureMixin",
-		"FallenTreeFeatureMixin"
+		"TerrainPhaseCaptureMixin",
+		"MatchingBlocksPredicateAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -3,20 +3,31 @@ package com.steelextractor.extractors
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.mojang.serialization.Lifecycle
 import com.steelextractor.SteelExtractor
+import net.minecraft.core.MappedRegistry
+import net.minecraft.core.Holder
+import net.minecraft.core.HolderGetter
+import net.minecraft.core.RegistrationInfo
 import net.minecraft.core.Registry
 import net.minecraft.core.particles.ParticleType
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.particles.SimpleParticleType
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
+import net.minecraft.data.worldgen.BootstrapContext
+import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.Identifier
 import net.minecraft.server.MinecraftServer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.stats.StatType
 import net.minecraft.world.entity.npc.villager.VillagerProfession
 import net.minecraft.world.entity.npc.villager.VillagerType
+import net.minecraft.world.level.block.entity.DecoratedPotPattern
+import net.minecraft.world.level.block.entity.DecoratedPotPatterns
 import net.minecraft.world.level.gameevent.PositionSourceType
 import net.minecraft.world.level.saveddata.maps.MapDecorationType
+import java.util.stream.Stream
 
 private fun <T : Any> extractBuiltInRegistry(
     registry: Registry<T>,
@@ -50,71 +61,22 @@ class ParticleTypeRegistryExtractor : SteelExtractor.Extractor {
         if (particleType is SimpleParticleType) {
             return "simple"
         }
-
         return when (particleType) {
-            ParticleTypes.BLOCK,
-            ParticleTypes.BLOCK_MARKER,
-            ParticleTypes.FALLING_DUST,
-            ParticleTypes.DUST_PILLAR,
-            ParticleTypes.BLOCK_CRUMBLE -> "block"
-
-            ParticleTypes.ENTITY_EFFECT,
-            ParticleTypes.TINTED_LEAVES,
-            ParticleTypes.FLASH -> "color"
-
+            ParticleTypes.BLOCK, ParticleTypes.BLOCK_MARKER, ParticleTypes.FALLING_DUST,
+            ParticleTypes.DUST_PILLAR, ParticleTypes.BLOCK_CRUMBLE -> "block"
+            ParticleTypes.ENTITY_EFFECT, ParticleTypes.TINTED_LEAVES, ParticleTypes.FLASH -> "color"
             ParticleTypes.DUST -> "dust"
             ParticleTypes.DUST_COLOR_TRANSITION -> "dust_color_transition"
-            ParticleTypes.GEYSER,
-            ParticleTypes.GEYSER_PLUME -> "geyser"
-
-            ParticleTypes.GEYSER_BASE,
-            ParticleTypes.GEYSER_POOF -> "geyser_base"
-
+            ParticleTypes.GEYSER, ParticleTypes.GEYSER_PLUME -> "geyser"
+            ParticleTypes.GEYSER_BASE, ParticleTypes.GEYSER_POOF -> "geyser_base"
             ParticleTypes.DRAGON_BREATH -> "power"
-            ParticleTypes.EFFECT,
-            ParticleTypes.INSTANT_EFFECT -> "spell"
-
+            ParticleTypes.EFFECT, ParticleTypes.INSTANT_EFFECT -> "spell"
             ParticleTypes.ITEM -> "item"
             ParticleTypes.SCULK_CHARGE -> "sculk_charge"
             ParticleTypes.SHRIEK -> "shriek"
             ParticleTypes.TRAIL -> "trail"
             ParticleTypes.VIBRATION -> "vibration"
             else -> error("Unknown parameterized particle type: ${BuiltInRegistries.PARTICLE_TYPE.getKey(particleType)}")
-        }
-    }
-}
-
-class PositionSourceTypeRegistryExtractor : SteelExtractor.Extractor {
-    override fun fileName(): String {
-        return "steel-registry/build_assets/position_source_types.json"
-    }
-
-    override fun extract(server: MinecraftServer): JsonElement {
-        return extractBuiltInRegistry(BuiltInRegistries.POSITION_SOURCE_TYPE) { positionSourceType: PositionSourceType<*>, _ ->
-            when (positionSourceType) {
-                PositionSourceType.BLOCK,
-                PositionSourceType.ENTITY -> Unit
-
-                else -> error(
-                    "Unknown position source type: ${BuiltInRegistries.POSITION_SOURCE_TYPE.getKey(positionSourceType)}"
-                )
-            }
-        }
-    }
-}
-
-class MapDecorationTypeRegistryExtractor : SteelExtractor.Extractor {
-    override fun fileName(): String {
-        return "steel-registry/build_assets/map_decoration_types.json"
-    }
-
-    override fun extract(server: MinecraftServer): JsonElement {
-        return extractBuiltInRegistry(BuiltInRegistries.MAP_DECORATION_TYPE) { type: MapDecorationType, json ->
-            json.addProperty("asset_id", type.assetId().toString())
-            json.addProperty("show_on_item_frame", type.showOnItemFrame())
-            json.addProperty("map_color", type.mapColor())
-            json.addProperty("exploration_map_element", type.explorationMapElement())
-            json.addProperty("track_count", type.trackCount())
         }
     }
 }
@@ -150,22 +112,72 @@ class VillagerProfessionRegistryExtractor : SteelExtractor.Extractor {
     }
 }
 
-class CustomStatRegistryExtractor : SteelExtractor.Extractor {
+class DecoratedPotPatternRegistryExtractor : SteelExtractor.Extractor {
     override fun fileName(): String {
-        return "steel-registry/build_assets/custom_stats.json"
+        return "steel-registry/build_assets/decorated_pot_patterns.json"
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        return extractBuiltInRegistry(BuiltInRegistries.CUSTOM_STAT) { _: Identifier, _ -> }
+        val registry = MappedRegistry(Registries.DECORATED_POT_PATTERN, Lifecycle.stable())
+        val context = object : BootstrapContext<DecoratedPotPattern> {
+            override fun register(
+                key: ResourceKey<DecoratedPotPattern>,
+                value: DecoratedPotPattern
+            ): Holder.Reference<DecoratedPotPattern> {
+                return registry.register(key, value, RegistrationInfo.BUILT_IN)
+            }
+
+            override fun <S : Any> lookup(key: ResourceKey<out Registry<out S>>): HolderGetter<S> {
+                error("Decorated pot pattern bootstrap unexpectedly looked up $key")
+            }
+
+            @Deprecated("Decorated pot pattern bootstrap never lists context elements.")
+            override fun <S : Any> listContextElements(key: ResourceKey<out Registry<out S>>): Stream<Holder.Reference<S>> {
+                error("Decorated pot pattern bootstrap unexpectedly listed $key")
+            }
+        }
+        DecoratedPotPatterns.bootstrap(context)
+        return extractBuiltInRegistry(registry) { pattern: DecoratedPotPattern, json ->
+            json.addProperty("asset_id", pattern.assetId().toString())
+        }
     }
 }
 
-class StatTypeRegistryExtractor : SteelExtractor.Extractor {
-    override fun fileName(): String {
-        return "steel-registry/build_assets/stat_types.json"
-    }
+class PositionSourceTypeRegistryExtractor : SteelExtractor.Extractor {
+    override fun fileName(): String = "steel-registry/build_assets/position_source_types.json"
 
     override fun extract(server: MinecraftServer): JsonElement {
-        return extractBuiltInRegistry(BuiltInRegistries.STAT_TYPE) { _: StatType<*>, _ -> }
+        return extractBuiltInRegistry(BuiltInRegistries.POSITION_SOURCE_TYPE) { type: PositionSourceType<*>, _ ->
+            when (type) {
+                PositionSourceType.BLOCK, PositionSourceType.ENTITY -> Unit
+                else -> error("Unknown position source type: ${BuiltInRegistries.POSITION_SOURCE_TYPE.getKey(type)}")
+            }
+        }
     }
+}
+
+class MapDecorationTypeRegistryExtractor : SteelExtractor.Extractor {
+    override fun fileName(): String = "steel-registry/build_assets/map_decoration_types.json"
+
+    override fun extract(server: MinecraftServer): JsonElement {
+        return extractBuiltInRegistry(BuiltInRegistries.MAP_DECORATION_TYPE) { type: MapDecorationType, json ->
+            json.addProperty("asset_id", type.assetId().toString())
+            json.addProperty("show_on_item_frame", type.showOnItemFrame())
+            json.addProperty("track_count", type.trackCount())
+        }
+    }
+}
+
+class CustomStatRegistryExtractor : SteelExtractor.Extractor {
+    override fun fileName(): String = "steel-registry/build_assets/custom_stats.json"
+
+    override fun extract(server: MinecraftServer): JsonElement =
+        extractBuiltInRegistry(BuiltInRegistries.CUSTOM_STAT) { _: Identifier, _ -> }
+}
+
+class StatTypeRegistryExtractor : SteelExtractor.Extractor {
+    override fun fileName(): String = "steel-registry/build_assets/stat_types.json"
+
+    override fun extract(server: MinecraftServer): JsonElement =
+        extractBuiltInRegistry(BuiltInRegistries.STAT_TYPE) { _: StatType<*>, _ -> }
 }
