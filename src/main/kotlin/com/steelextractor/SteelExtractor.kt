@@ -34,7 +34,6 @@ import com.steelextractor.extractors.PositionSourceTypeRegistryExtractor
 import com.steelextractor.extractors.StatTypeRegistryExtractor
 import com.steelextractor.extractors.GameEvents
 import com.steelextractor.extractors.Weathering
-import com.steelextractor.extractors.Strippables
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ChunkLevel
 import net.minecraft.server.level.ServerLevel
@@ -271,7 +270,6 @@ object SteelExtractor : ModInitializer {
         addUnlessDisabled("LEVEL_EVENTS") { LevelEvents() }
         addUnlessDisabled("TAGS") { Tags() }
         addUnlessDisabled("STRUCTURE_STARTS") { StructureStarts() }
-        addUnlessDisabled("STRIPPABLES") { Strippables() }
         addUnlessDisabled("WEATHERING") { Weathering() }
         addUnlessDisabled("CANDLE_CAKES") { CandleCakes() }
         addUnlessDisabled("WAXABLES") { Waxables() }
