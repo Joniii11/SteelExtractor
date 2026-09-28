@@ -414,9 +414,63 @@ class Blocks : SteelExtractor.Extractor {
         return resultJson
     }
 
+    private fun stateFluidProperties(state: BlockState): StateFluidProperties {
+        val fluidState = state.fluidState
+        return StateFluidProperties(
+            BuiltInRegistries.FLUID.getKey(fluidState.type).path,
+            fluidState.amount,
+            fluidState.hasProperty(FlowingFluid.FALLING) && fluidState.getValue(FlowingFluid.FALLING),
+        )
+    }
+
+    private fun stateFluidPropertiesJson(properties: StateFluidProperties): JsonObject {
+        val json = JsonObject()
+        json.addProperty("fluid", properties.fluid)
+        json.addProperty("amount", properties.amount)
+        json.addProperty("falling", properties.falling)
+        return json
+    }
+
+    private fun createStateFluidPropertiesJson(block: Block): JsonObject {
+        val resultJson = JsonObject()
+        val possibleStates = block.stateDefinition.possibleStates
+        if (possibleStates.isEmpty()) {
+            resultJson.add("default", stateFluidPropertiesJson(StateFluidProperties("empty", 0, false)))
+            resultJson.add("overwrites", JsonArray())
+            return resultJson
+        }
+
+        val propertyCounts = LinkedHashMap<StateFluidProperties, Int>()
+        for (state in possibleStates) {
+            propertyCounts.merge(stateFluidProperties(state), 1, Int::plus)
+        }
+
+        var defaultProperties = stateFluidProperties(possibleStates[0])
+        var defaultCount = 0
+        for ((properties, count) in propertyCounts) {
+            if (count > defaultCount) {
+                defaultProperties = properties
+                defaultCount = count
+            }
+        }
+        resultJson.add("default", stateFluidPropertiesJson(defaultProperties))
+
+        val overwrites = JsonArray()
+        for (i in possibleStates.indices) {
+            val currentProperties = stateFluidProperties(possibleStates[i])
+            if (currentProperties != defaultProperties) {
+                val overwrite = stateFluidPropertiesJson(currentProperties)
+                overwrite.addProperty("offset", i)
+                overwrites.add(overwrite)
+            }
+        }
+        resultJson.add("overwrites", overwrites)
+        return resultJson
+    }
+
     private fun createStateBooleanPropertiesJson(
         block: Block,
-        valueForState: (BlockState) -> Boolean,
+        getValue: (BlockState) -> Boolean,
     ): JsonObject {
         val resultJson = JsonObject()
         val possibleStates = block.stateDefinition.possibleStates
@@ -428,10 +482,10 @@ class Blocks : SteelExtractor.Extractor {
 
         val propertyCounts = LinkedHashMap<Boolean, Int>()
         for (state in possibleStates) {
-            propertyCounts.merge(valueForState(state), 1, Int::plus)
+            propertyCounts.merge(getValue(state), 1, Int::plus)
         }
 
-        var defaultValue = valueForState(possibleStates[0])
+        var defaultValue = getValue(possibleStates[0])
         var defaultCount = 0
         for ((value, count) in propertyCounts) {
             if (count > defaultCount) {
@@ -443,62 +497,11 @@ class Blocks : SteelExtractor.Extractor {
 
         val overwrites = JsonArray()
         for (i in possibleStates.indices) {
-            val currentValue = valueForState(possibleStates[i])
+            val currentValue = getValue(possibleStates[i])
             if (currentValue != defaultValue) {
                 val overwrite = JsonObject()
                 overwrite.addProperty("offset", i)
                 overwrite.addProperty("value", currentValue)
-                overwrites.add(overwrite)
-            }
-        }
-        resultJson.add("overwrites", overwrites)
-        return resultJson
-    }
-
-    private fun fluidProperties(state: BlockState): StateFluidProperties {
-        val fluidState = state.fluidState
-        return StateFluidProperties(
-            fluid = BuiltInRegistries.FLUID.getKey(fluidState.type).path,
-            amount = fluidState.amount,
-            falling = fluidState.hasProperty(FlowingFluid.FALLING)
-                    && fluidState.getValue(FlowingFluid.FALLING),
-        )
-    }
-
-    private fun fluidPropertiesJson(properties: StateFluidProperties): JsonObject {
-        val json = JsonObject()
-        json.addProperty("fluid", properties.fluid)
-        json.addProperty("amount", properties.amount)
-        json.addProperty("falling", properties.falling)
-        return json
-    }
-
-    private fun createFluidStatePropertiesJson(block: Block): JsonObject {
-        val resultJson = JsonObject()
-        val possibleStates = block.stateDefinition.possibleStates
-        require(possibleStates.isNotEmpty()) { "block ${BuiltInRegistries.BLOCK.getKey(block)} has no states" }
-
-        val propertyCounts = LinkedHashMap<StateFluidProperties, Int>()
-        for (state in possibleStates) {
-            propertyCounts.merge(fluidProperties(state), 1, Int::plus)
-        }
-
-        var defaultProperties = fluidProperties(possibleStates[0])
-        var defaultCount = 0
-        for ((properties, count) in propertyCounts) {
-            if (count > defaultCount) {
-                defaultProperties = properties
-                defaultCount = count
-            }
-        }
-        resultJson.add("default", fluidPropertiesJson(defaultProperties))
-
-        val overwrites = JsonArray()
-        for (i in possibleStates.indices) {
-            val currentProperties = fluidProperties(possibleStates[i])
-            if (currentProperties != defaultProperties) {
-                val overwrite = fluidPropertiesJson(currentProperties)
-                overwrite.addProperty("offset", i)
                 overwrites.add(overwrite)
             }
         }
@@ -521,7 +524,9 @@ class Blocks : SteelExtractor.Extractor {
             colorCounts.merge(color, 1, Int::plus)
         }
 
-        var defaultColor = possibleStates[0].getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id
+        var defaultColor = possibleStates[0]
+            .getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
+            .id
         var defaultCount = 0
         for ((color, count) in colorCounts) {
             if (count > defaultCount) {
@@ -533,7 +538,9 @@ class Blocks : SteelExtractor.Extractor {
 
         val overwrites = JsonArray()
         for (i in possibleStates.indices) {
-            val color = possibleStates[i].getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id
+            val color = possibleStates[i]
+                .getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
+                .id
             if (color != defaultColor) {
                 val overwrite = JsonObject()
                 overwrite.addProperty("offset", i)
@@ -609,7 +616,6 @@ class Blocks : SteelExtractor.Extractor {
 
             behaviourJson.addProperty("liquid", getPrivateFieldValue<Boolean>(behaviourProps, "liquid"))
             behaviourJson.addProperty("isAir", getPrivateFieldValue<Boolean>(behaviourProps, "isAir"))
-            //behaviourJson.addProperty("isRedstoneConductor", getPrivateFieldValue<Boolean>(behaviourProps, "isRedstoneConductor"))
             //behaviourJson.addProperty("isSuffocating", getPrivateFieldValue<Boolean>(behaviourProps, "isSuffocating"))
             behaviourJson.addProperty(
                 "requiresCorrectToolForDrops",
@@ -637,22 +643,22 @@ class Blocks : SteelExtractor.Extractor {
             blockJson.add("interaction_shapes", shapesStructureJson.getAsJsonObject("interaction_shapes"))
             blockJson.add("visual_shapes", shapesStructureJson.getAsJsonObject("visual_shapes"))
             blockJson.add("light_properties", createLightPropertiesJson(block))
-            blockJson.add("fluid_state", createFluidStatePropertiesJson(block))
+            blockJson.add("fluid_state", createStateFluidPropertiesJson(block))
             blockJson.add("map_color", createStateMapColorJson(block))
             blockJson.add(
                 "randomly_ticking",
-                createStateBooleanPropertiesJson(block) { it.isRandomlyTicking },
+                createStateBooleanPropertiesJson(block) { state -> state.isRandomlyTicking },
             )
             blockJson.add(
                 "suffocating",
-                createStateBooleanPropertiesJson(block) {
-                    it.isSuffocating(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
+                createStateBooleanPropertiesJson(block) { state ->
+                    state.isSuffocating(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
                 },
             )
             blockJson.add(
                 "redstone_conductor",
-                createStateBooleanPropertiesJson(block) {
-                    it.isRedstoneConductor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
+                createStateBooleanPropertiesJson(block) { state ->
+                    state.isRedstoneConductor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
                 },
             )
 
