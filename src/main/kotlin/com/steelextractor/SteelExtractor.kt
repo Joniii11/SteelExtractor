@@ -4,7 +4,6 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.steelextractor.extractors.Attributes
 import com.steelextractor.extractors.Classes
-import com.steelextractor.extractors.ComponentHashes
 import com.steelextractor.extractors.DataComponents
 import com.steelextractor.extractors.BlockEntities
 import com.steelextractor.extractors.Blocks
@@ -243,13 +242,11 @@ object SteelExtractor : ModInitializer {
             }
         }
 
-        addUnlessDisabled("WORLDGEN_NOISE_SAMPLES") { com.steelextractor.extractors.WorldgenNoiseSamples() }
         addUnlessDisabled("BLOCKS") { Blocks() }
         addUnlessDisabled("BLOCK_ENTITIES") { BlockEntities() }
         addUnlessDisabled("COMMANDS") { Commands() }
         addUnlessDisabled("ITEMS") { Items() }
         addUnlessDisabled("DATA_COMPONENTS") { DataComponents() }
-        addUnlessDisabled("COMPONENT_HASHES") { ComponentHashes() }
         addUnlessDisabled("PARTICLE_TYPES") { ParticleTypeRegistryExtractor() }
         addUnlessDisabled("POSITION_SOURCE_TYPES") { PositionSourceTypeRegistryExtractor() }
         addUnlessDisabled("VILLAGER_TYPES") { VillagerTypeRegistryExtractor() }
