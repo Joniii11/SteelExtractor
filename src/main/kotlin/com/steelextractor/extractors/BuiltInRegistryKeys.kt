@@ -3,17 +3,6 @@ package com.steelextractor.extractors
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.mojang.serialization.Lifecycle
-import net.minecraft.core.MappedRegistry
-import net.minecraft.core.Holder
-import net.minecraft.core.HolderGetter
-import net.minecraft.core.RegistrationInfo
-import net.minecraft.core.registries.Registries
-import net.minecraft.data.worldgen.BootstrapContext
-import net.minecraft.resources.ResourceKey
-import net.minecraft.world.level.block.entity.DecoratedPotPattern
-import net.minecraft.world.level.block.entity.DecoratedPotPatterns
-import java.util.stream.Stream
 import com.steelextractor.SteelExtractor
 import net.minecraft.core.Registry
 import net.minecraft.core.particles.ParticleType
@@ -176,36 +165,5 @@ class StatTypeRegistryExtractor : SteelExtractor.Extractor {
 
     override fun extract(server: MinecraftServer): JsonElement {
         return extractBuiltInRegistry(BuiltInRegistries.STAT_TYPE) { _: StatType<*>, _ -> }
-    }
-}
-
-class DecoratedPotPatternRegistryExtractor : SteelExtractor.Extractor {
-    override fun fileName(): String {
-        return "steel-registry/build_assets/decorated_pot_patterns.json"
-    }
-
-    override fun extract(server: MinecraftServer): JsonElement {
-        val registry = MappedRegistry(Registries.DECORATED_POT_PATTERN, Lifecycle.stable())
-        val context = object : BootstrapContext<DecoratedPotPattern> {
-            override fun register(
-                key: ResourceKey<DecoratedPotPattern>,
-                value: DecoratedPotPattern
-            ): Holder.Reference<DecoratedPotPattern> {
-                return registry.register(key, value, RegistrationInfo.BUILT_IN)
-            }
-
-            override fun <S : Any> lookup(key: ResourceKey<out Registry<out S>>): HolderGetter<S> {
-                error("Decorated pot pattern bootstrap unexpectedly looked up $key")
-            }
-
-            @Deprecated("Decorated pot pattern bootstrap never lists context elements.")
-            override fun <S : Any> listContextElements(key: ResourceKey<out Registry<out S>>): Stream<Holder.Reference<S>> {
-                error("Decorated pot pattern bootstrap unexpectedly listed $key")
-            }
-        }
-        DecoratedPotPatterns.bootstrap(context)
-        return extractBuiltInRegistry(registry) { pattern: DecoratedPotPattern, json ->
-            json.addProperty("asset_id", pattern.assetId().toString())
-        }
     }
 }

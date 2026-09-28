@@ -25,7 +25,6 @@ import com.steelextractor.extractors.VillagerProfessionRegistryExtractor
 import com.steelextractor.extractors.VillagerTypeRegistryExtractor
 import com.steelextractor.extractors.CandleCakes
 import com.steelextractor.extractors.ChunkStageHashes
-import com.steelextractor.extractors.DecoratedPotPatternRegistryExtractor
 import com.steelextractor.extractors.CustomStatRegistryExtractor
 import com.steelextractor.extractors.Commands
 import com.steelextractor.extractors.EntityVariantRegistries
@@ -250,7 +249,6 @@ object SteelExtractor : ModInitializer {
         addUnlessDisabled("POSITION_SOURCE_TYPES") { PositionSourceTypeRegistryExtractor() }
         addUnlessDisabled("VILLAGER_TYPES") { VillagerTypeRegistryExtractor() }
         addUnlessDisabled("VILLAGER_PROFESSIONS") { VillagerProfessionRegistryExtractor() }
-        addUnlessDisabled("DECORATED_POT_PATTERNS") { DecoratedPotPatternRegistryExtractor() }
         addUnlessDisabled("PACKETS") { Packets() }
         addUnlessDisabled("MENU_TYPES") { MenuTypes() }
         addUnlessDisabled("ENTITIES") { Entities() }
