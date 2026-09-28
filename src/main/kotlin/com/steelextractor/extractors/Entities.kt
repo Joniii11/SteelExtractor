@@ -141,6 +141,7 @@ class Entities : SteelExtractor.Extractor {
                 entityTypeJson.addProperty("summonable", entityType.canSummon())
                 entityTypeJson.addProperty("allowed_in_peaceful", entityType.isAllowedInPeaceful())
                 entityTypeJson.addProperty("can_serialize", entityType.canSerialize())
+                entityTypeJson.addProperty("only_op_can_set_nbt", entityType.onlyOpCanSetNbt())
                 entityTypeJson.addProperty("can_spawn_far_from_player", entityType.canSpawnFarFromPlayer())
 
                 // Synched data
